@@ -26,7 +26,7 @@ else:
 
 # Production CORS configuration
 CORS(app, origins=[
-    os.getenv('FRONTEND_URL', 'https://frontend-app.onrender.com'),
+    os.getenv('FRONTEND_URL', 'https://tutorial-7-frontend.onrender.com'),
     "http://localhost:3000",  # For local development
     "http://localhost:5173",  # For Vite dev server
 ])

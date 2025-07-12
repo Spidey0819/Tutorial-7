@@ -13,7 +13,7 @@ services:
       - key: MONGO_URI
         sync: false
       - key: FRONTEND_URL
-        value: https://your-frontend-app.onrender.com
+        value: https://tutorial-7-frontend.onrender.com
     healthCheckPath: /api/health
     plan: free
     region: oregon
