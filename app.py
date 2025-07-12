@@ -16,26 +16,24 @@ app = Flask(__name__)
 # Configure logging based on environment
 ENV = os.getenv('ENVIRONMENT', 'development')
 if ENV == 'production':
-    # Production logging - minimal output
     logging.basicConfig(level=logging.WARNING)
     app.logger.setLevel(logging.WARNING)
 else:
-    # Development logging
     logging.basicConfig(level=logging.INFO)
     app.logger.setLevel(logging.INFO)
 
 # Production CORS configuration
 CORS(app, origins=[
     os.getenv('FRONTEND_URL', 'https://tutorial-7-frontend.onrender.com'),
-    "http://localhost:3000",  # For local development
-    "http://localhost:5173",  # For Vite dev server
+    "http://localhost:3000",
+    "http://localhost:5173",
 ])
 
 # Environment-based configuration
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'fallback-secret-key-change-in-production')
 
 # MongoDB connection with secure error handling
-MONGO_URI = os.getenv('MONGO_URI', 'xxxxxxxxxxxxxxxxxxxxxxxxxxx')
+MONGO_URI = os.getenv('MONGO_URI', 'xxxxxxxxxxxxxx')
 
 def init_database():
     """Initialize database connection with secure error handling"""
@@ -43,14 +41,14 @@ def init_database():
         client = MongoClient(MONGO_URI)
         # Test connection without exposing URI
         client.admin.command('ping')
-        
+
         if ENV == 'development':
             app.logger.info("✅ Database connection successful")
-        
+
         db = client['registration_db']
         users_collection = db['users']
         products_collection = db['products']
-        
+
         # Create indexes safely
         try:
             users_collection.create_index("email", unique=True)
@@ -60,9 +58,9 @@ def init_database():
         except Exception as e:
             if ENV == 'development':
                 app.logger.warning(f"⚠️ Index creation warning: {str(e)[:50]}...")
-        
+
         return db, users_collection, products_collection
-        
+
     except Exception as e:
         if ENV == 'development':
             app.logger.error(f"❌ Database connection failed: {str(e)[:50]}...")
@@ -77,21 +75,22 @@ db, users_collection, products_collection = init_database()
 def auth_middleware(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if not users_collection:
+        # FIXED: Use 'is None' instead of 'not users_collection'
+        if users_collection is None:
             return jsonify({'error': 'Database unavailable'}), 503
-            
+
         token = None
         auth_header = request.headers.get('Authorization')
-        
+
         if auth_header:
             try:
                 token = auth_header.split(" ")[1]
             except IndexError:
                 return jsonify({'error': 'Invalid token format'}), 401
-        
+
         if not token:
             return jsonify({'error': 'Token is missing'}), 401
-        
+
         try:
             data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
             current_user = users_collection.find_one({'_id': ObjectId(data['user_id'])})
@@ -104,9 +103,9 @@ def auth_middleware(f):
         except Exception as e:
             app.logger.error(f"Token validation error: {str(e)[:50]}...")
             return jsonify({'error': 'Token validation failed'}), 401
-        
+
         return f(current_user, *args, **kwargs)
-    
+
     return decorated
 
 def validate_auth_data(data, is_login=False):
@@ -175,9 +174,10 @@ def validate_registration_data(data):
 
 @app.route('/api/auth/register', methods=['POST'])
 def register_jwt():
-    if not users_collection:
+    # FIXED: Use 'is None' instead of 'not users_collection'
+    if users_collection is None:
         return jsonify({'error': 'Service temporarily unavailable'}), 503
-        
+
     try:
         data = request.get_json()
 
@@ -237,9 +237,10 @@ def register_jwt():
 
 @app.route('/api/auth/login', methods=['POST'])
 def login_jwt():
-    if not users_collection:
+    # FIXED: Use 'is None' instead of 'not users_collection'
+    if users_collection is None:
         return jsonify({'error': 'Service temporarily unavailable'}), 503
-        
+
     try:
         data = request.get_json()
 
@@ -296,9 +297,10 @@ def verify_token(current_user):
 @app.route('/api/products', methods=['GET'])
 @auth_middleware
 def get_products(current_user):
-    if not products_collection:
+    # FIXED: Use 'is None' instead of 'not products_collection'
+    if products_collection is None:
         return jsonify({'error': 'Service temporarily unavailable'}), 503
-        
+
     try:
         page = int(request.args.get('page', 1))
         limit = int(request.args.get('limit', 10))
@@ -370,9 +372,10 @@ def get_products(current_user):
 @app.route('/api/products', methods=['POST'])
 @auth_middleware
 def create_product(current_user):
-    if not products_collection:
+    # FIXED: Use 'is None' instead of 'not products_collection'
+    if products_collection is None:
         return jsonify({'error': 'Service temporarily unavailable'}), 503
-        
+
     try:
         data = request.get_json()
 
@@ -428,9 +431,10 @@ def create_product(current_user):
 @app.route('/api/products/<product_id>', methods=['GET'])
 @auth_middleware
 def get_product(current_user, product_id):
-    if not products_collection:
+    # FIXED: Use 'is None' instead of 'not products_collection'
+    if products_collection is None:
         return jsonify({'error': 'Service temporarily unavailable'}), 503
-        
+
     try:
         product = products_collection.find_one({'id': product_id})
 
@@ -456,9 +460,10 @@ def get_product(current_user, product_id):
 @app.route('/api/products/<product_id>', methods=['PUT'])
 @auth_middleware
 def update_product(current_user, product_id):
-    if not products_collection:
+    # FIXED: Use 'is None' instead of 'not products_collection'
+    if products_collection is None:
         return jsonify({'error': 'Service temporarily unavailable'}), 503
-        
+
     try:
         data = request.get_json()
 
@@ -511,9 +516,10 @@ def update_product(current_user, product_id):
 @app.route('/api/products/<product_id>', methods=['DELETE'])
 @auth_middleware
 def delete_product(current_user, product_id):
-    if not products_collection:
+    # FIXED: Use 'is None' instead of 'not products_collection'
+    if products_collection is None:
         return jsonify({'error': 'Service temporarily unavailable'}), 503
-        
+
     try:
         product = products_collection.find_one({'id': product_id})
 
@@ -539,9 +545,10 @@ def delete_product(current_user, product_id):
 
 @app.route('/api/register', methods=['POST'])
 def register_user():
-    if not users_collection:
+    # FIXED: Use 'is None' instead of 'not users_collection'
+    if users_collection is None:
         return jsonify({'error': 'Service temporarily unavailable'}), 503
-        
+
     try:
         data = request.get_json()
 
@@ -595,9 +602,10 @@ def register_user():
 
 @app.route('/api/login', methods=['POST'])
 def login_user():
-    if not users_collection:
+    # FIXED: Use 'is None' instead of 'not users_collection'
+    if users_collection is None:
         return jsonify({'error': 'Service temporarily unavailable'}), 503
-        
+
     try:
         data = request.get_json()
 
@@ -630,9 +638,10 @@ def login_user():
 
 @app.route('/api/users', methods=['GET'])
 def get_all_users():
-    if not users_collection:
+    # FIXED: Use 'is None' instead of 'not users_collection'
+    if users_collection is None:
         return jsonify({'error': 'Service temporarily unavailable'}), 503
-        
+
     try:
         users = list(users_collection.find({}, {'password': 0}))
 
@@ -656,9 +665,10 @@ def get_all_users():
 
 @app.route('/api/users/<user_id>', methods=['GET'])
 def get_user(user_id):
-    if not users_collection:
+    # FIXED: Use 'is None' instead of 'not users_collection'
+    if users_collection is None:
         return jsonify({'error': 'Service temporarily unavailable'}), 503
-        
+
     try:
         user = users_collection.find_one({'_id': ObjectId(user_id)}, {'password': 0})
 
@@ -686,13 +696,14 @@ def health_check():
     try:
         status = 'healthy'
         db_status = 'connected'
-        
-        if db:
+
+        # FIXED: Use 'is not None' instead of 'if db'
+        if db is not None:
             db.command('ping')
         else:
             status = 'degraded'
             db_status = 'unavailable'
-            
+
         return jsonify({
             'status': status,
             'message': 'API is running',
@@ -728,6 +739,43 @@ def root():
         ]
     }), 200
 
+# Add error handlers
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({
+        'error': 'Endpoint not found',
+        'message': 'The requested API endpoint does not exist',
+        'available_endpoints': [
+            '/api/health',
+            '/api/register',
+            '/api/auth/register',
+            '/api/auth/login',
+            '/api/products'
+        ]
+    }), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    return jsonify({
+        'error': 'Internal server error',
+        'message': 'Something went wrong on the server'
+    }), 500
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
-    app.run(host='0.0.0.0', port=port)
+    debug_mode = ENV == 'development'
+
+    # Secure startup logging
+    if ENV == 'development':
+        print(f"🚀 Starting server on port {port}")
+        print(f"🔧 Debug mode: {debug_mode}")
+        print(f"🌍 Environment: {ENV}")
+        if db is not None:
+            print("✅ Database connection established")
+        else:
+            print("❌ Database connection failed")
+    else:
+        # Production: minimal logging
+        print("Server starting...")
+
+    app.run(debug=debug_mode, host='0.0.0.0', port=port)
